@@ -1,0 +1,166 @@
+---
+// Slide 14: root-cause analysis as a best-first search over rounds, pruned by the deviation
+// heat maps. Badges = deviation; faded = pruned; dashed = candidate; red = root cause;
+// blue = under-used evidence. Illustrative, OPAL experiment 67.
+const seqs = [
+  ['System prompt', 'sys'],
+  ['User request', 'usr'],
+  ['Retrieved docs', 'doc'],
+  ['Multi-modal data', 'mm'],
+  ['Tool results', 'tool'],
+  ['Earlier outputs', 'prev'],
+] as const;
+type Cell = [text: string, dev: string, kind: 'pruned' | 'cand' | 'root' | 'under' | 'hot'] | null;
+const rounds: { agent: string; cells: Cell[] }[] = [
+  { agent: 'Round 1 · Analysis agent', cells: [['Analysis rules', '+.1', 'pruned'], ['Q1: peak?', '+.1', 'pruned'], ['Prior finding', '+.9', 'root'], ['Fluorescence + QC', '+.4', 'cand'], ['Means per conc.', '−.7', 'under'], null] },
+  { agent: 'Round 2 · Analysis agent', cells: [['Analysis rules', '+.1', 'pruned'], ['Q2: decline?', '+.1', 'pruned'], ['Fv/Fm definition', '+.1', 'pruned'], null, ['Means, CI, p-values', '+.4', 'cand'], ['Peak (R1)', '+.8', 'hot']] },
+  { agent: 'Round 3 · Selection agent', cells: [['Ranking rules', '+.1', 'pruned'], ['Q3: top 3 at onset?', '+.1', 'pruned'], ['Prior findings', '+.8', 'hot'], null, ['Accession means', '+.1', 'pruned'], ['Peak + onset', '+.6', 'hot']] },
+];
+const LX = 0, LW = 170;           // legend
+const CX = [205, 420, 635], CW = 190; // round columns
+const RY = (i: number) => 52 + i * 46, RH = 36;
+const AY = RY(6) + 10;            // agent label row
+const TY = AY + 82;               // search tree row 1
+const T2 = TY + 62;               // search tree row 2
+---
+<div class="rcs">
+  <div class="svgwrap">
+    <svg viewBox="0 0 1000 520" role="img" aria-labelledby="rcs-t">
+      <title id="rcs-t">Root-cause search across three rounds: four nodes visited, from the wrong result back to the prior finding in round 1</title>
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahp" /></marker>
+        <marker id="ahg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5d7882" /></marker>
+      </defs>
+
+      {/* sequence legend + guide lines */}
+      {seqs.map(([label, cls], i) => (
+        <g>
+          <line x1={LX + LW} x2={CX[2] + CW} y1={RY(i) + RH / 2} y2={RY(i) + RH / 2} class={`guide ${cls}`} />
+          <rect x={LX} y={RY(i)} width={LW} height={RH} rx="7" class={`lab ${cls}`} />
+          <text x={LX + 12} y={RY(i) + 23} class="labt">{label}</text>
+        </g>
+      ))}
+      <text x={LX} y="34" class="hdr">Prompt sequences</text>
+
+      {/* round columns */}
+      {rounds.map((r, c) => (
+        <g>
+          <text x={CX[c] + CW / 2} y="34" class="hdr" text-anchor="middle">Prompt, round {c + 1}</text>
+          <rect x={CX[c]} y="44" width={CW} height={RY(6) - 44} rx="8" class="col" />
+          {r.cells.map((cell, i) => cell ? (
+            <g class={`cell ${cell[2]}`}>
+              <rect x={CX[c] + 8} y={RY(i)} width={CW - 16} height={RH} rx="5" />
+              <text x={CX[c] + CW / 2} y={RY(i) + 23} text-anchor="middle">{cell[0]}</text>
+              <rect x={CX[c] + CW - 46} y={RY(i) - 9} width="38" height="18" rx="5" class="badge" />
+              <text x={CX[c] + CW - 27} y={RY(i) + 4} text-anchor="middle" class="badget">{cell[1]}</text>
+              {cell[2] === 'root' && <g><rect x={CX[c] + 4} y={RY(i) - 11} width="74" height="18" rx="4" class="rootlab" /><text x={CX[c] + 41} y={RY(i) + 2} text-anchor="middle" class="rootlabt">root cause</text></g>}
+            </g>
+          ) : (
+            <rect x={CX[c] + 8} y={RY(i)} width={CW - 16} height={RH} rx="5" class="empty" />
+          ))}
+          <rect x={CX[c] - 6} y={AY} width={CW + 12} height="34" rx="6" class="agent" />
+          <text x={CX[c] + CW / 2} y={AY + 22} text-anchor="middle" class="agentt">{r.agent}</text>
+          {c < 2 && <line x1={CX[c] + CW + 6} y1={AY + 4} x2={CX[c + 1] + 6} y2={RY(5) + RH / 2 + 4} class="flow" marker-end="url(#ahg)" />}
+        </g>
+      ))}
+
+      {/* search tree */}
+      <text x={CX[0]} y={TY - 22} class="treet">Search tree: visit the highest deviation first; step back, or backtrack on a dead end</text>
+      {[
+        [CX[0], TY, 'Prior finding (+.9) ★', 'root', '4'],
+        [CX[1], TY, 'Peak (R1) (+.8)', 'visit', '3'],
+        [CX[2], TY, 'Peak + onset (+.6)', 'visit', '2'],
+        [CX[2], T2, 'Prior findings (+.8) ✗', 'dead', '1'],
+        [CX[0], T2, 'Fluorescence (+.4)', 'unv', ''],
+        [CX[1], T2, 'Means, CI, p (+.4)', 'unv', ''],
+      ].map(([x, y, label, kind, n]) => (
+        <g class={`node ${kind}`}>
+          <rect x={x as number} y={y as number} width={CW} height="38" rx="6" />
+          <text x={(x as number) + CW / 2} y={(y as number) + 24} text-anchor="middle">{label}</text>
+          {n && <g><circle cx={x as number} cy={y as number} r="13" class="numc" /><text x={x as number} y={(y as number) + 5} text-anchor="middle" class="numt">{n}</text></g>}
+        </g>
+      ))}
+      <g class="node start">
+        <rect x="855" y={TY + 22} width="140" height="56" rx="7" />
+        <text x="925" y={TY + 46} text-anchor="middle">Wrong result</text>
+        <text x="925" y={TY + 64} text-anchor="middle" class="sub">start here</text>
+      </g>
+      <line x1="855" y1={TY + 40} x2={CX[2] + CW + 2} y2={TY + 19} class="edge" marker-end="url(#ah)" />
+      <line x1="855" y1={TY + 60} x2={CX[2] + CW + 2} y2={T2 + 19} class="edge" marker-end="url(#ah)" />
+      <text x="925" y={T2 + 30} text-anchor="middle" class="note">1 is a dead end: backtrack</text>
+      <line x1={CX[2]} y1={TY + 19} x2={CX[1] + CW + 2} y2={TY + 19} class="edge" marker-end="url(#ah)" />
+      <line x1={CX[1]} y1={TY + 19} x2={CX[0] + CW + 2} y2={TY + 19} class="edge" marker-end="url(#ah)" />
+      <line x1={CX[1] + 20} y1={TY + 38} x2={CX[0] + CW - 10} y2={T2} class="edge faint" />
+      <line x1={CX[2] + 20} y1={TY + 38} x2={CX[1] + CW - 10} y2={T2} class="edge faint" />
+    </svg>
+  </div>
+
+  <aside class="space">
+    <h3>Search space</h3>
+    <div class="k">Exhaustive</div>
+    <div class="big">2<sup>15</sup> ≈ 33,000</div>
+    <p class="muted">subsets of the 15 inputs to re-run (leave-one-out and combinations)</p>
+    <div class="squares" aria-hidden="true">
+      {Array.from({ length: 15 }, (_, i) => <i class={[2, 3, 4, 8, 9, 13].includes(i) ? 'on' : ''}></i>)}
+    </div>
+    <p class="muted"><em>6 of 15 inputs kept as suspects</em></p>
+    <div class="k">Pruned search</div>
+    <div class="big">4 visited</div>
+    <p class="muted">3 prompts scored, one forward pass each; no re-runs</p>
+  </aside>
+  <p class="legend-note">Badges = deviation (observed − expected); faded = pruned (|deviation| &lt; 0.3); dashed = candidate; solid red = root cause; blue = under-used evidence. Illustrative, OPAL experiment 67.</p>
+</div>
+
+<style>
+  .rcs { --pur: #b48af0; --red: #f0605a; --blue: #4ea3e8; margin-top: 32px; display: grid; grid-template-columns: 1fr 250px; gap: 24px; }
+  @media (max-width: 1000px) { .rcs { grid-template-columns: 1fr; } }
+  .svgwrap { overflow-x: auto; }
+  svg { width: 100%; min-width: 760px; height: auto; display: block; font-family: var(--sans); }
+  .hdr { fill: var(--muted); font-size: 15px; font-weight: 600; }
+  .lab.sys { fill: #8a9ba3; } .lab.usr { fill: #5aa9e6; } .lab.doc { fill: #4fd18b; }
+  .lab.mm { fill: #b07cd8; } .lab.tool { fill: #ef8a43; } .lab.prev { fill: #3cc9b0; }
+  .labt { fill: #071119; font-size: 14px; font-weight: 700; }
+  .guide { stroke-width: 1.5; stroke-dasharray: 5 5; opacity: .45; }
+  .guide.sys { stroke: #8a9ba3; } .guide.usr { stroke: #5aa9e6; } .guide.doc { stroke: #4fd18b; }
+  .guide.mm { stroke: #b07cd8; } .guide.tool { stroke: #ef8a43; } .guide.prev { stroke: #3cc9b0; }
+  .col { fill: #0a1a22; stroke: #2a4652; stroke-width: 1.5; }
+  .empty { fill: none; stroke: #23404c; stroke-dasharray: 3 4; }
+  .cell text { font-size: 13px; fill: var(--text); }
+  .cell.pruned rect:first-child { fill: #12262f; stroke: #1f3a45; }
+  .cell.pruned text { fill: #5d7882; }
+  .cell.pruned .badge { fill: #2a4652; } .cell.pruned .badget { fill: #8aa3ab; }
+  .cell.cand rect:first-child { fill: rgba(240, 96, 90, .22); stroke: var(--pur); stroke-width: 2; stroke-dasharray: 6 4; }
+  .cell.hot rect:first-child { fill: rgba(240, 96, 90, .55); stroke: var(--pur); stroke-width: 2; stroke-dasharray: 6 4; }
+  .cell.root rect:first-child { fill: var(--red); stroke: #7a1410; stroke-width: 3; }
+  .cell.under rect:first-child { fill: rgba(78, 163, 232, .55); stroke: var(--blue); stroke-width: 2; }
+  .cell.hot text, .cell.root text, .cell.cand text, .cell.under text { font-weight: 700; }
+  .badge { fill: #6a3fb0; } .badget { fill: #fff; font-size: 11px; font-weight: 700; }
+  .cell.under .badge { fill: #1f6fb2; }
+  .rootlab { fill: #7a1410; } .rootlabt { fill: #fff; font-size: 11px; font-weight: 700; }
+  .agent { fill: #16323d; stroke: #2e5260; } .agentt { fill: var(--text); font-size: 13px; font-weight: 700; }
+  .flow { stroke: #5d7882; stroke-width: 1.5; }
+  .treet { fill: var(--pur); font-size: 15px; font-weight: 600; font-style: italic; }
+  .node text { font-size: 14px; fill: var(--text); font-weight: 600; }
+  .node.root rect { fill: var(--red); stroke: #7a1410; stroke-width: 3; }
+  .node.visit rect { fill: #221a33; stroke: var(--pur); stroke-width: 2.5; }
+  .node.dead rect { fill: #15262e; stroke: #5d7882; stroke-width: 2; }
+  .node.dead text { fill: #b9c8cc; }
+  .node.unv rect { fill: none; stroke: var(--pur); stroke-width: 1.5; stroke-dasharray: 6 4; opacity: .7; }
+  .node.unv text { fill: #7f8f95; font-weight: 400; }
+  .node.start rect { fill: var(--red); stroke: #7a1410; stroke-width: 2; }
+  .node.start text { fill: #fff; font-weight: 700; } .node.start .sub { font-size: 12px; font-weight: 400; }
+  .numc { fill: #6a3fb0; stroke: var(--bg); stroke-width: 2; } .node.root .numc { fill: #7a1410; }
+  .numt { fill: #fff !important; font-size: 13px !important; font-weight: 700; }
+  .edge { stroke: var(--pur); stroke-width: 2.5; } .edge.faint { stroke-width: 1.5; stroke-dasharray: 5 5; opacity: .6; }
+  .ahp { fill: var(--pur); }
+  .note { fill: var(--muted); font-size: 13px; font-style: italic; }
+  .space { background: #1a1428; border: 1px solid #4a3770; border-radius: var(--radius); padding: 20px; align-self: start; }
+  .space h3 { color: var(--pur); }
+  .k { font-weight: 700; margin-top: 10px; }
+  .big { font-size: 2rem; font-weight: 800; line-height: 1.1; margin: 4px 0 6px; }
+  .space p { font-size: .88rem; }
+  .squares { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 14px 0 6px; }
+  .squares i { aspect-ratio: 1.4; border-radius: 4px; background: #3a4a52; }
+  .squares i.on { background: #7b4cc4; }
+  .legend-note { grid-column: 1 / -1; color: var(--muted); font-size: .8rem; font-style: italic; margin: 0; }
+</style>

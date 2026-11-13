@@ -1,0 +1,115 @@
+---
+// Slide 17: how the vLLM connector captures attention per decode token, on a side stream.
+// Snapshot values are illustrative.
+const seqColors = ['#8a9ba3', '#5aa9e6', '#ef8a43', '#3cc9b0', '#5aa9e6', '#ef8a43'];
+const seqLens = [10, 8, 18, 10, 6, 12]; // tokens per prompt sequence, for the snapshot strip
+const n = seqLens.reduce((a, b) => a + b, 0);
+const seqOf = (i: number) => { let s = 0, k = i; while (k >= seqLens[s]) { k -= seqLens[s]; s++; } return s; };
+const val = (i: number) => {
+  const s = seqOf(i), h = Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1;
+  const base = [0.08, 0.15, 0.35, 0.75, 0.25, 0.3][s];
+  return Math.min(1, base * (0.4 + h * 1.2));
+};
+const SX = 130, SW = 860; // snapshot strip
+const cw = SW / n;
+---
+<figure class="conn">
+  <svg viewBox="0 0 1000 330" role="img" aria-labelledby="conn-t">
+    <title id="conn-t">Timeline: vLLM's main stream runs prefill and decode steps; after each decode, a side stream recomputes that token's attention before the next decode starts; one record is written when the request finishes</title>
+    <defs>
+      <marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9bb3ba" /></marker>
+      <marker id="co" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ef8a43" /></marker>
+      <marker id="cp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b48af0" /></marker>
+    </defs>
+    {/* lanes */}
+    <text x="0" y="52" class="lane">vLLM</text><text x="0" y="70" class="lanes">main GPU stream</text>
+    <text x="0" y="152" class="lane cap">Capture</text><text x="0" y="170" class="lanes">side stream</text>
+    <rect x="125" y="20" width="875" height="86" rx="8" class="lanebg" />
+    <rect x="125" y="122" width="875" height="80" rx="8" class="lanebg cap" />
+
+    {/* main stream */}
+    <rect x="130" y="28" width="55" height="70" rx="6" class="sched" /><text x="157" y="68" class="st">sched.</text>
+    <rect x="190" y="28" width="140" height="70" rx="6" class="prefill" />
+    <text x="260" y="58" class="bt">prefill</text><text x="260" y="78" class="bs">read the prompt, fill KV</text>
+    <rect x="335" y="28" width="75" height="70" rx="6" class="sched" /><text x="372" y="68" class="st">schedule</text>
+    {[[415, 'decode 1', 'token 1'], [620, 'decode 2', 'token 2']].map(([x, a, b]) => (
+      <g>
+        <rect x={x as number} y="28" width="120" height="70" rx="6" class="decode" />
+        <text x={(x as number) + 60} y="48" class="bt">{a}</text><text x={(x as number) + 60} y="64" class="bs">→ {b}</text>
+        <rect x={(x as number) + 10} y="72" width="100" height="20" rx="4" class="probe" />
+        <text x={(x as number) + 60} y="86" class="pt">probe: copy q</text>
+      </g>
+    ))}
+    <rect x="540" y="28" width="75" height="70" rx="6" class="sched" /><text x="577" y="68" class="st">schedule</text>
+    <line x1="742" y1="63" x2="846" y2="63" class="ln" marker-end="url(#ca)" />
+    <rect x="850" y="28" width="145" height="174" rx="8" class="done" />
+    <text x="922" y="98" class="bt dk">request done</text>
+    <text x="922" y="122" class="mono">req.safetensors</text>
+    <text x="922" y="140" class="mono">+ Flowcept task</text>
+
+    {/* capture stream */}
+    <text x="200" y="158" class="note">prefill is not captured: it is the prompt</text>
+    <text x="200" y="176" class="note">every decode token attends to</text>
+    {[[540, 'snapshot 1'], [745, 'snapshot 2']].map(([x, t]) => (
+      <g>
+        <rect x={x as number} y="135" width="100" height="58" rx="6" class="snap" />
+        <text x={(x as number) + 50} y="156" class="bt">{t}</text><text x={(x as number) + 50} y="172" class="bs">q·Kᵀ → softmax</text><text x={(x as number) + 50} y="186" class="bs">→ reduce</text>
+      </g>
+    ))}
+    <line x1="530" y1="99" x2="552" y2="133" class="sync1" marker-end="url(#co)" />
+    <line x1="632" y1="133" x2="628" y2="101" class="sync2" marker-end="url(#cp)" />
+    <line x1="735" y1="99" x2="757" y2="133" class="sync1" marker-end="url(#co)" />
+    <line x1="845" y1="164" x2="848" y2="164" class="ln" marker-end="url(#ca)" />
+    {[[528, 113, '1', 'o'], [643, 113, '2', 'p'], [733, 113, '1', 'o']].map(([x, y, t, c]) => (
+      <g><circle cx={x as number} cy={y as number} r="10" class={`num ${c}`} /><text x={x as number} y={(y as number) + 4} class="numt">{t}</text></g>
+    ))}
+
+    {/* snapshot strip */}
+    <text x="0" y="244" class="lane sm">Attention</text>
+    <text x="0" y="262" class="lanes">of decode token k</text>
+    {Array.from({ length: n }, (_, i) => (
+      <rect x={SX + i * cw + 0.5} y="226" width={cw - 1} height="40" style={`fill: color-mix(in oklab, #2b8fd0 ${Math.round(val(i) * 100)}%, #12262f)`} />
+    ))}
+    {seqLens.map((len, s) => {
+      const start = seqLens.slice(0, s).reduce((a, b) => a + b, 0);
+      return <rect x={SX + start * cw} y="272" width={len * cw - 2} height="7" style={`fill:${seqColors[s]}`} />;
+    })}
+    <text x={SX} y="300" class="lanes">one value per prompt token, colored by sequence: system · question · tool output · earlier answer · question · tool output (illustrative)</text>
+  </svg>
+  <div class="notes">
+    <div><b class="o">1</b><strong>Capture starts after the forward</strong><span>The probe copies the query of the token being generated (~16 KB/layer); the keys are already in the KV cache.</span></div>
+    <div><b class="s">■</b><strong>Recompute the attention</strong><span>q·Kᵀ on the cached keys, softmax, reduce over layers × heads: one full row per generated token; top-k kept per sequence.</span></div>
+    <div><b class="p">2</b><strong>Next decode waits for the capture</strong><span>The snapshot is complete before the next token is generated; the scheduling step hides most of the cost.</span></div>
+    <div><b class="r">■</b><strong>One record per request</strong><span>A SafeTensors file plus a Flowcept task that points to it, written when the request finishes.</span></div>
+  </div>
+</figure>
+
+<style>
+  .conn { margin: 0; }
+  svg { width: 100%; min-width: 720px; height: auto; display: block; font-family: var(--sans); }
+  .lane { fill: var(--text); font-size: 17px; font-weight: 800; } .lane.cap { fill: #4ea3e8; } .lane.sm { font-size: 15px; }
+  .lanes { fill: var(--muted); font-size: 12px; }
+  .lanebg { fill: #0b1f28; } .lanebg.cap { fill: #0a1c2c; }
+  .sched { fill: #0f2833; stroke: #3d6270; } .st { fill: var(--muted); font-size: 12px; text-anchor: middle; }
+  .prefill { fill: #12715f; } .decode { fill: #1b2a3a; stroke: #46607a; }
+  .bt { fill: #fff; font-size: 14px; font-weight: 700; text-anchor: middle; } .bt.dk { fill: #2b1600; }
+  .bs { fill: #d6e4e8; font-size: 11px; text-anchor: middle; }
+  .probe { fill: #ef8a43; } .pt { fill: #fff; font-size: 11px; font-weight: 700; text-anchor: middle; }
+  .done { fill: #f5d9b8; stroke: #ef8a43; stroke-width: 2; }
+  .mono { fill: #2b1600; font: 12px var(--mono); text-anchor: middle; }
+  .snap { fill: #1f5f8b; }
+  .note { fill: var(--muted); font-size: 12px; font-style: italic; }
+  .ln { stroke: #9bb3ba; stroke-width: 1.5; }
+  .sync1 { stroke: #ef8a43; stroke-width: 2; } .sync2 { stroke: #b48af0; stroke-width: 2; }
+  .num.o { fill: #ef8a43; } .num.p { fill: #7b4cc4; }
+  .numt { fill: #fff; font-size: 12px; font-weight: 700; text-anchor: middle; }
+  figure > svg { overflow: visible; }
+  .notes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 18px; }
+  @media (max-width: 900px) { .notes { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .notes { grid-template-columns: 1fr; } }
+  .notes div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; font-size: .88rem; display: flex; flex-direction: column; gap: 4px; }
+  .notes span { color: var(--muted); }
+  .notes b { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #fff; font-size: .8rem; }
+  .notes b.o { background: #ef8a43; } .notes b.p { background: #7b4cc4; }
+  .notes b.s { background: #1f5f8b; border-radius: 5px; } .notes b.r { background: #ef8a43; border-radius: 5px; }
+</style>

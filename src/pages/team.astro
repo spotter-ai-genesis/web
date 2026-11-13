@@ -1,0 +1,74 @@
+---
+import Base from '../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+import { url, PARTNERS } from '../lib';
+
+const people = (await getCollection('people')).sort((a, b) => a.data.order - b.data.order || a.data.name.localeCompare(b.data.name));
+// Display order and blurbs; people come from src/content/people/.
+const institutions = [
+  ['ANL', 'Lead institution. Provenance capture, normative importance, forensics.'],
+  ['IIT', 'IOWarp and the CLIO agentic workspace.'],
+  ['HPE', 'Common Metadata Framework (CMF), AI lifecycle provenance.'],
+  ['ORNL', 'Flowcept provenance; OPAL autonomous plant-science lab.'],
+] as const;
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).map((w) => w[0]).filter((c) => c === c.toUpperCase()).slice(0, 2).join('');
+---
+<Base title="Team" description="The SPOTTER-AI team: Argonne, Illinois Tech, HPE and Oak Ridge.">
+  <section class="hero short">
+    <div class="wrap">
+      <div class="eyebrow">Team</div>
+      {institutions.map(([key, what]) => {
+        const p = PARTNERS.find((x) => x.key === key)!;
+        const members = people.filter((m) => m.data.institution === key);
+        return (
+          <div class="inst">
+            <div class="who">
+              <a class="logo-tile" href={p.href}><img src={url(p.logo)} alt={p.name} /></a>
+              <h2>{p.name}</h2>
+              <p class="muted">{what}</p>
+            </div>
+            <ul class="people">
+              {members.map((m) => {
+                const inner = (
+                  <>
+                    {m.data.photo
+                      ? <img class="avatar" src={url(`/people/${m.data.photo}`)} alt="" loading="lazy" width="112" height="112" />
+                      : <span class="avatar initials" aria-hidden="true">{initials(m.data.name)}</span>}
+                    <span class="name">{m.data.name}</span>
+                    {m.data.role && <span class="role">{m.data.role}</span>}
+                  </>
+                );
+                return <li>{m.data.url ? <a href={m.data.url}>{inner}</a> : <div>{inner}</div>}</li>;
+              })}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  </section>
+</Base>
+
+<style>
+  .hero.short { padding-top: 56px; }
+  .inst {
+    display: grid; grid-template-columns: 280px 1fr; gap: 32px; align-items: center;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 26px; margin-bottom: 22px;
+  }
+  @media (max-width: 860px) { .inst { grid-template-columns: 1fr; } }
+  .who h2 { font-size: 1.25rem; margin: 0 0 .3em; }
+  .who p { margin: 0; font-size: .92rem; }
+  .people { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 22px 16px; }
+  .people li { width: 128px; }
+  .people a, .people li > div { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; color: var(--text); }
+  .people a:hover { text-decoration: none; }
+  .people a:hover .name { color: var(--cyan); }
+  .avatar {
+    width: 112px; height: 112px; border-radius: 50%; object-fit: cover;
+    border: 3px solid #1d3a46; box-shadow: 0 0 0 1px rgba(0, 212, 219, .25);
+  }
+  .people a:hover .avatar { border-color: var(--cyan); }
+  .initials { display: grid; place-items: center; background: linear-gradient(135deg, #12425a, #0f2833); color: var(--cyan-soft); font: 700 2rem/1 var(--sans); }
+  .name { font-weight: 650; line-height: 1.25; }
+  .role { color: var(--muted); font-size: .82rem; margin-top: -4px; }
+</style>

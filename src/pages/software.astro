@@ -1,0 +1,64 @@
+---
+import Base from '../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+import Connector from '../components/software/Connector.astro';
+import Flowcept from '../components/software/Flowcept.astro';
+import Timm from '../components/software/Timm.astro';
+import Clio from '../components/software/Clio.astro';
+
+const diagrams = { connector: Connector, flowcept: Flowcept, timm: Timm, clio: Clio };
+const repos = await Promise.all(
+  (await getCollection('software'))
+    .sort((a, b) => a.data.order - b.data.order)
+    .map(async (r) => ({ ...r, Content: (await render(r)).Content })),
+);
+const flow = [
+  ['vLLM / timm', ''], ['Flowcept + SafeTensors', ''], ['CLIO heat maps', ''],
+];
+---
+<Base title="Software" description="SPOTTER-AI open-source repositories: vLLM attention connector, Flowcept, timm and CLIO.">
+  <section class="hero">
+    <div class="wrap">
+      <div class="eyebrow">Software</div>
+      <h1>From vision to code.</h1>
+      <p class="lede">Open source under <a href="https://github.com/spotter-ai-genesis">github.com/spotter-ai-genesis</a>. Attention is captured where the model runs, recorded as provenance, and turned into heat maps people can check.</p>
+      <div class="flow" aria-label="Data flow">
+        {flow.map(([t, k], i) => (<>{i > 0 && <span class="fa">→</span>}<span class={`fb ${k}`}>{t}</span></>))}
+      </div>
+      <nav class="toc" aria-label="Repositories">
+        {repos.map((r) => <a href={`#${r.id}`}>{r.data.name}</a>)}
+      </nav>
+    </div>
+  </section>
+
+  {repos.map((r, i) => {
+    const D = r.data.diagram ? diagrams[r.data.diagram] : null;
+    return (
+      <section id={r.id} class={i % 2 === 0 ? 'alt' : ''}>
+        <div class="wrap">
+          <div class="head">
+            <h2><a href={r.data.repo}>{r.data.name}</a></h2>
+            <a class="btn" href={r.data.repo}>GitHub ↗</a>
+          </div>
+          <p class="lede">{r.data.summary}</p>
+          <div class="prose body"><r.Content /></div>
+          {D && <div class="diagram"><D /></div>}
+        </div>
+      </section>
+    );
+  })}
+</Base>
+
+<style>
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 1.6rem; }
+  .fb { padding: 10px 16px; border-radius: 8px; background: #0a3a3a; border: 1px solid #19b8a6; font-weight: 700; font-size: .92rem; }
+  .fa { color: var(--muted); }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 1.4rem; font: 600 .85rem/1.4 var(--mono); }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .head h2 { margin: 0; font-family: var(--mono); font-size: clamp(1.5rem, 3vw, 2.2rem); }
+  .head h2 a { color: var(--text); }
+  .lede { margin-top: .8rem; }
+  .body { color: var(--muted); }
+  .body :global(code) { color: var(--text); background: #0b1c24; padding: 2px 6px; border-radius: 4px; }
+  .diagram { margin-top: 28px; overflow-x: auto; }
+</style>

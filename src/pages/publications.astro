@@ -1,0 +1,52 @@
+---
+import Base from '../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+const pubs = (await getCollection('publications')).sort((a, b) => b.data.year - a.data.year || (a.data.order ?? 100) - (b.data.order ?? 100) || a.data.title.localeCompare(b.data.title));
+// The live demo (Apptainer image, prompts and instructions).
+const DEMO = 'https://drive.google.com/drive/folders/1I9kFZOR0eIjIGMVMI1nH3jCd-rWihMKN';
+const groups = [
+  ['project', 'SPOTTER-AI publications'],
+  ['related', 'Foundations and related work'],
+] as const;
+---
+<Base title="Publications" description="The SPOTTER-AI demo, publications of the project, and related work.">
+  <section class="hero">
+    <div class="wrap">
+      <div class="eyebrow">SPOTTER-AI demo · SC26 · Chicago</div>
+      <h1><a class="demo" href={DEMO}>SPOTTER-AI × CLIO ↗</a></h1>
+      <p class="lede">
+        The full SPOTTER-AI stack working end to end inside CLIO: vLLM serves the model while the attention
+        connector captures what every answer token attended to, Flowcept records the provenance behind each
+        round, and CLIO turns it into interactive heat maps over every prompt of the session. Runs offline
+        from one Apptainer image on a 6 GB GPU.
+      </p>
+      <div class="actions"><a class="btn primary" href={DEMO}>Get the demo ↗</a></div>
+    </div>
+  </section>
+  {groups.map(([kind, label]) => {
+    const list = pubs.filter((p) => p.data.kind === kind);
+    if (kind === 'project' && list.length === 0) return null; // no project papers yet
+    return (
+      <section class="alt">
+        <div class="wrap">
+          <h2>{label}</h2>
+          <ul class="list">
+            {list.map((p) => (
+              <li>
+                <div class="date">{p.data.year} · {p.data.venue}</div>
+                <h3>{p.data.url ? <a href={p.data.url}>{p.data.title}</a> : p.data.title}</h3>
+                <div class="muted">{p.data.authors}{p.data.pdf && <> · <a href={p.data.pdf}>PDF</a></>}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    );
+  })}
+</Base>
+
+<style>
+  h1 .demo { color: var(--text); }
+  h1 .demo:hover { color: var(--cyan); text-decoration: none; }
+</style>

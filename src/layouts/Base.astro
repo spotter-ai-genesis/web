@@ -1,0 +1,56 @@
+---
+import '../styles/global.css';
+import { url, GITHUB, PARTNERS } from '../lib';
+
+interface Props { title?: string; description?: string; }
+const { title, description = 'SPOTTER-AI protects the logic of AI-driven discovery: layered provenance, normative importance and agentic root-cause attribution for trustworthy AI workflows.' } = Astro.props;
+const fullTitle = title ? `${title} · SPOTTER-AI` : 'SPOTTER-AI · Protecting the logic of AI-driven discovery';
+const nav = [
+  ['/research/', 'Research'],
+  ['/software/', 'Software'],
+  ['/team/', 'Team'],
+  ['/publications/', 'Publications'],
+];
+const here = Astro.url.pathname;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={new URL(url('/logo.png'), Astro.site)} />
+    <link rel="icon" type="image/png" href={url('/logo.png')} />
+  </head>
+  <body>
+    <div class="banner"><a href={url('/publications/')}>SPOTTER-AI AT SC26 · NOV 15–20 · CHICAGO · LIVE DEMO →</a></div>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href={url('/')}><img src={url('/logo.png')} alt="" width="34" height="34" />SPOTTER-AI</a>
+        <nav class="nav" aria-label="Main">
+          {nav.map(([p, label]) => (
+            <a href={url(p)} aria-current={here.startsWith(url(p)) ? 'page' : undefined}>{label}</a>
+          ))}
+          <a href={GITHUB}>GitHub ↗</a>
+        </nav>
+      </div>
+    </header>
+    <main><slot /></main>
+    <footer class="site-footer">
+      <div class="wrap">
+        <div>
+          <strong style="color:var(--text)">SPOTTER-AI</strong> · DOE Genesis Mission · Topic 20B: Data Provenance &amp; Integrity Verification<br />
+          Contact: <a href="mailto:bogdan.nicolae@acm.org">bogdan.nicolae@acm.org</a> · <a href={GITHUB}>github.com/spotter-ai-genesis</a>
+        </div>
+        <div class="partners" aria-label="Partners">
+          {PARTNERS.map((p) => (
+            <a class="partner" href={p.href} title={p.name}><img src={url(p.logo)} alt={p.name} /></a>
+          ))}
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

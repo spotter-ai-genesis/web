@@ -1,0 +1,64 @@
+---
+import Base from '../layouts/Base.astro';
+import Architecture from '../components/Architecture.astro';
+import Loop from '../components/Loop.astro';
+---
+<Base title="Research" description="SPOTTER-AI in a nutshell: a guardian AI that secures scientific workflows by learning forensic attribution through provenance.">
+  <section class="hero">
+    <div class="wrap">
+      <div class="eyebrow">Research · a guardian AI for scientific workflows</div>
+      <h1>SPOTTER-AI in a nutshell.</h1>
+      <div class="thesis">
+        <strong>Thesis:</strong> a guardian AI can automatically secure a target workflow by learning forensic
+        attribution through provenance, with <b>normative importance</b> as the core idea.
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap">
+      <div class="eyebrow"><span class="num">01</span>Architecture</div>
+      <div class="nut">
+        <Architecture />
+        <div class="rs">
+          <div class="rcard r1">
+            <h3>R1 · Capture</h3>
+            <p class="muted">Deep, low-overhead capture of the intermediate AI artifacts other frameworks miss (attention scores, KV norms, activations), with detail steered by R2.</p>
+          </div>
+          <div class="rcard r2">
+            <h3>R2 · Understand</h3>
+            <p class="muted">A transformer learns the influence an input should have; influence that is not commensurate with that role is the poisoning signal.</p>
+          </div>
+          <div class="rcard r3">
+            <h3>R3 · Automate forensics</h3>
+            <p class="muted">Agentic backward reasoning walks the provenance to the root-cause input, guided by R2, and labels the attack automatically.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow"><span class="num">02</span>Synergy</div>
+      <h2>A self-reinforcing loop, not a pipeline.</h2>
+      <p class="lede">Each thrust makes the next one better, and then improves the one before it.</p>
+      <Loop />
+    </div>
+  </section>
+</Base>
+
+<style>
+  .thesis {
+    margin-top: 1.4rem; max-width: 56em; padding: 18px 22px; border-left: 6px solid var(--cyan);
+    background: #0a3038; border-radius: 8px; font-size: 1.2rem;
+  }
+  .thesis strong { color: var(--cyan); } .thesis b { color: #c9fbff; }
+  .nut { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 32px; align-items: center; }
+  @media (max-width: 960px) { .nut { grid-template-columns: 1fr; } }
+  .rs { display: flex; flex-direction: column; gap: 16px; }
+  .rcard { background: var(--panel); border: 1px solid var(--line); border-left: 6px solid; border-radius: 10px; padding: 18px 20px; }
+  .rcard h3 { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .rcard p { margin: 0; }
+  .rcard.r1 { border-left-color: var(--cyan); } .rcard.r2 { border-left-color: #4fd18b; } .rcard.r3 { border-left-color: #4ea3e8; }
+</style>

@@ -1,0 +1,85 @@
+---
+// Slide 18: what Flowcept records for each round of an agentic chain.
+const rounds = [
+  { y: 60, n: 1, used: 'prompt (system, Q1, tool outputs)', gen: '“ANSWER: 200”' },
+  { y: 300, n: 2, used: 'prompt (… + round-1 answer + Q2)', gen: '“ANSWER: 500”' },
+];
+const segs = [['system', 90, '#8a9ba3'], ['Q1', 55, '#5aa9e6'], ['tool', 100, '#ef8a43'], ['answer R1', 95, '#3cc9b0'], ['Q2', 55, '#5aa9e6'], ['tool', 100, '#ef8a43'], ['…', 40, '#3d5560']] as const;
+let sx = 16;
+const segX = segs.map(([, w]) => { const x = sx; sx += (w as number) + 4; return x; });
+---
+<figure class="fc">
+  <svg viewBox="0 0 770 450" role="img" aria-labelledby="fc-t">
+    <title id="fc-t">Flowcept records, per round, an agent task and a decode_attention task pointing to a SafeTensors file; round 1's answer is a declared sequence of round 2's prompt</title>
+    <defs><marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9bb3ba" /></marker>
+      <marker id="ft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3cc9b0" /></marker></defs>
+    <rect x="2" y="2" width="766" height="446" rx="10" class="wf" />
+    <text x="16" y="32" class="h"><tspan font-weight="800">Workflow:</tspan> OPAL chain</text>
+    <rect x="330" y="12" width="425" height="30" rx="6" class="nested" />
+    <text x="542" y="32" class="nt">nested vLLM workflow: model · tokenizer · connector settings</text>
+
+    {rounds.map((r) => (
+      <g>
+        <rect x="16" y={r.y} width="250" height="100" rx="6" class="task" />
+        <text x="26" y={r.y + 22} class="tt">Round {r.n} · agent task</text>
+        <text x="26" y={r.y + 44} class="tl"><tspan font-weight="700">used:</tspan> {r.used}</text>
+        <text x="26" y={r.y + 64} class="tl"><tspan font-weight="700">generated:</tspan> {r.gen}</text>
+        <text x="26" y={r.y + 84} class="tm">model, parameters, token usage</text>
+        <line x1="266" y1={r.y + 50} x2="286" y2={r.y + 50} class="ln" marker-end="url(#fa)" />
+        <rect x="290" y={r.y + 8} width="205" height="84" rx="6" class="task" />
+        <text x="300" y={r.y + 30} class="tt">decode_attention task</text>
+        <text x="300" y={r.y + 50} class="tl">request id, token counts, timing</text>
+        <text x="300" y={r.y + 72} class="tl hl">attention_stats: uri, sha256, bytes</text>
+        <line x1="495" y1={r.y + 50} x2="515" y2={r.y + 50} class="ln dash" marker-end="url(#fa)" />
+        <rect x="519" y={r.y} width="236" height="100" rx="6" class="file" />
+        <text x="533" y={r.y + 22} class="ft">round{r.n}.safetensors</text>
+        <text x="533" y={r.y + 42} class="fm">prompt_token_ids · segments</text>
+        <text x="533" y={r.y + 58} class="fm">topk_pos · val_all_max</text>
+        <text x="533" y={r.y + 74} class="fm">  (per reply token)</text>
+        <text x="533" y={r.y + 90} class="fm">attn_sum · attn_peak</text>
+      </g>
+    ))}
+
+    {/* round 2 prompt as declared sequences */}
+    {segs.map(([t, w, c], i) => (
+      <g><rect x={segX[i]} y="200" width={w} height="32" style={`fill:${c}`} /><text x={segX[i] + (w as number) / 2} y="221" class="seg">{t}</text></g>
+    ))}
+    <text x="16" y="256" class="cap">Round 2 prompt, split into declared sequences (the segments tensor)</text>
+    <path d={`M 140 160 L ${segX[3] + 47} 198`} class="edge" marker-end="url(#ft)" />
+    <rect x="590" y="196" width="165" height="40" rx="6" class="edgebox" />
+    <text x="672" y="213" class="et">reply → later prompt:</text><text x="672" y="229" class="et">an explicit edge</text>
+    <line x1="60" y1="232" x2="60" y2="298" class="ln" marker-end="url(#fa)" />
+    <text x="16" y="432" class="cap">Rounds are matched to their files by prompt token ids, not by vLLM's request counter.</text>
+  </svg>
+  <ul class="cons">
+    <li><b style="background:#5aa9e6">≡</b><div><strong>Prompts, by sequence</strong><span>token ids + declared sequence boundaries</span></div></li>
+    <li><b style="background:#46607a">↩</b><div><strong>Replies</strong><span>response text (agent task) + one attention row per reply token</span></div></li>
+    <li><b style="background:#3cc9b0">⛓</b><div><strong>Dependencies between rounds</strong><span>earlier replies are declared sequences of later prompts</span></div></li>
+    <li><b style="background:#8a9ba3">⚑</b><div><strong>Metadata</strong><span>model, tokenizer, connector settings once per workflow; timing and telemetry per task</span></div></li>
+    <li><b style="background:#ef8a43">▤</b><div><strong>Attention, by reference</strong><span>a SafeTensors file + checksum, not inline JSON</span></div></li>
+  </ul>
+</figure>
+
+<style>
+  .fc { margin: 0; display: grid; grid-template-columns: 1fr 280px; gap: 22px; align-items: start; }
+  @media (max-width: 960px) { .fc { grid-template-columns: 1fr; } }
+  svg { width: 100%; height: auto; display: block; font-family: var(--sans); }
+  .wf { fill: #0b1f28; stroke: #2e5260; stroke-width: 1.5; }
+  .h { fill: var(--text); font-size: 17px; }
+  .nested { fill: #0f2833; stroke: #3cc9b0; } .nt { fill: var(--text); font-size: 12.5px; font-weight: 700; text-anchor: middle; }
+  .task { fill: #0f2833; stroke: #9bb3ba; stroke-width: 1.5; }
+  .tt { fill: #fff; font-size: 14px; font-weight: 800; } .tl { fill: #d6e4e8; font-size: 12px; } .tl.hl { fill: #4fe0c8; font-weight: 700; }
+  .tm { fill: var(--muted); font-size: 11.5px; }
+  .file { fill: #3a2410; stroke: #ef8a43; stroke-width: 1.5; }
+  .ft { fill: #ffd2a8; font: 700 13px var(--mono); } .fm { fill: #f0d8c0; font: 11.5px var(--mono); }
+  .ln { stroke: #9bb3ba; stroke-width: 1.5; } .ln.dash { stroke-dasharray: 5 4; }
+  .seg { fill: #071119; font-size: 12.5px; font-weight: 700; text-anchor: middle; }
+  .cap { fill: var(--muted); font-size: 12.5px; font-style: italic; }
+  .edge { fill: none; stroke: #3cc9b0; stroke-width: 2.5; }
+  .edgebox { fill: #0b2a2a; stroke: #3cc9b0; } .et { fill: var(--text); font-size: 12px; font-weight: 700; text-anchor: middle; }
+  .cons { list-style: none; margin: 0; padding: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; gap: 16px; }
+  .cons li { display: flex; gap: 12px; align-items: flex-start; }
+  .cons b { flex: 0 0 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 1rem; }
+  .cons div { display: flex; flex-direction: column; font-size: .9rem; line-height: 1.35; }
+  .cons span { color: var(--muted); font-size: .84rem; }
+</style>

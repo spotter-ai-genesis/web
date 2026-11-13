@@ -1,0 +1,106 @@
+---
+// Slide 13: normative importance as a heat map over one prompt.
+// Each word has an observed influence (attention) and an expected one (normative model);
+// the deviation (observed - expected) is shaded red (over-used) or blue (under-used).
+// Values are illustrative (OPAL experiment 67, round 1, tampered prior finding).
+type Tok = [text: string, obs: number, exp: number];
+const rows: { label: string; cls: string; toks: Tok[] }[] = [
+  { label: 'System prompt', cls: 'sys', toks: [['Aggregate', .1, .15], ['plants', .15, .2], ['→', .05, .05], ['cells', .15, .2], ['→', .05, .05], ['panel.', .15, .25], ['Drop', .1, .15], ['sentinel', .15, .25], ['values.', .1, .2]] },
+  { label: 'User request', cls: 'usr', toks: [['At', .1, .1], ['which', .15, .15], ['nickel', .3, .35], ['concentration', .35, .4], ['is', .05, .05], ['mean', .3, .35], ['Fv/Fm', .4, .45], ['highest?', .45, .45]] },
+  { label: 'Retrieved doc 1', cls: 'doc', toks: [['Prior', .45, .15], ['finding:', .5, .15], ['Fv/Fm', .75, .2], ['peaks', .8, .2], ['at', .6, .1], ['50', 1, .15], ['mg/kg', .8, .15], ['in', .4, .1], ['all', .7, .15], ['accessions.', .55, .15]] },
+  { label: 'Retrieved doc 2', cls: 'doc', toks: [['Fv/Fm', .2, .25], ['=', .05, .05], ['(Fm', .15, .2], ['−', .05, .05], ['Fo)/Fm:', .15, .2], ['efficiency', .2, .25], ['of', .05, .05], ['photosystem', .15, .2], ['II.', .1, .1]] },
+  { label: 'Tool result', cls: 'tool', toks: [['0:', .1, .2], ['.502', .15, .3], ['50:', .25, .2], ['.512', .3, .35], ['100:', .1, .2], ['.502', .15, .3], ['200:', .15, .7], ['.521', .2, .85], ['500:', .1, .25], ['.456', .15, .35], ['1000:', .1, .2], ['.458', .1, .3]] },
+];
+const all = rows.flatMap((r) => r.toks.map((t) => ({ t, cls: r.cls })));
+const maxDev = Math.max(...all.map(({ t }) => Math.abs(t[1] - t[2])));
+const dev = (t: Tok) => (t[1] - t[2]) / maxDev; // -1..1
+const devBg = (d: number) =>
+  Math.abs(d) < 0.08 ? 'transparent'
+  : `color-mix(in oklab, ${d > 0 ? 'var(--over)' : 'var(--under)'} ${Math.round(Math.abs(d) * 90)}%, transparent)`;
+const ramp = (v: number, color: string) => `color-mix(in oklab, ${color} ${Math.round(v * 92)}%, #0b1c24)`;
+---
+<figure class="dh" aria-label="Illustration: a prompt shaded by deviation between observed and expected influence">
+  <div class="main">
+    <p class="cap">The round-1 prompt, each word shaded by its deviation (observed − expected influence)</p>
+    {rows.map((r) => (
+      <div class="row">
+        <span class={`lab ${r.cls}`}>{r.label}</span>
+        <span class="toks">
+          {r.toks.map((t) => {
+            const d = dev(t);
+            return <span class={`tok${Math.abs(d) > 0.55 ? ' strong' : ''}`} style={`background:${devBg(d)}`}>{t[0]}</span>;
+          })}
+        </span>
+      </div>
+    ))}
+    <div class="out"><strong>Output:</strong> <em>“Mean Fv/Fm is highest at 50 mg/kg.”</em> <span class="bad">(true peak: 200)</span></div>
+
+    <div class="strips">
+      {[
+        ['Observed', 'what the model used', (t: Tok) => ramp(t[1], 'var(--obs)')],
+        ['Expected', 'what it should use', (t: Tok) => ramp(t[2], 'var(--exp)')],
+        ['Deviation', 'observed − expected', (t: Tok) => devBg(dev(t))],
+      ].map(([name, sub, color]) => (
+        <>
+          <div class="sl"><strong>{name as string}</strong><span>{sub as string}</span></div>
+          <div class="strip">{all.map(({ t }) => <i style={`background:${(color as (t: Tok) => string)(t)}`}></i>)}</div>
+        </>
+      ))}
+      <div class="sl"><span>prompt tokens →</span></div>
+      <div class="strip seqs">{all.map(({ cls }) => <i class={cls}></i>)}</div>
+    </div>
+  </div>
+
+  <aside class="how">
+    <h3>How it works</h3>
+    <div class="step"><b>1 · Prompt + output</b><span class="muted">tokens, their origin and the model's attention</span></div>
+    <div class="arrow">↓</div>
+    <div class="step model"><b>2 · Normative transformer</b><span>How much should each token influence this output? One forward pass.</span></div>
+    <div class="arrow">↓</div>
+    <div class="step"><b>3 · Deviation heat map</b>
+      <span class="key"><i style="background:var(--over)"></i>over-used: the tampered finding</span>
+      <span class="key"><i style="background:var(--under)"></i>under-used: the real peak (200)</span>
+      <span class="go">→ double-check these first</span>
+    </div>
+  </aside>
+  <figcaption>Illustrative values, OPAL experiment 67 (true panel means). Observed influence from attention; expected influence from the normative-importance model.</figcaption>
+</figure>
+
+<style>
+  .dh {
+    --over: #f0605a; --under: #4ea3e8; --obs: #9fc6cf; --exp: #d8b444;
+    --c-sys: #8a9ba3; --c-usr: #5aa9e6; --c-doc: #4fd18b; --c-tool: #ef8a43;
+    margin: 32px 0 0; display: grid; grid-template-columns: 1fr 280px; gap: 24px;
+  }
+  @media (max-width: 960px) { .dh { grid-template-columns: 1fr; } }
+  .main { min-width: 0; }
+  .cap { color: var(--muted); font-size: .92rem; margin-bottom: 14px; }
+  .row { display: grid; grid-template-columns: 140px 1fr; gap: 10px; align-items: start; margin-bottom: 8px; }
+  .lab { font: 600 .8rem/1 var(--sans); padding: 9px 10px; border-radius: 7px; color: #071119; text-align: center; }
+  .lab.sys { background: var(--c-sys); } .lab.usr { background: var(--c-usr); }
+  .lab.doc { background: var(--c-doc); } .lab.tool { background: var(--c-tool); }
+  .toks { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tok { padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); font-size: .9rem; }
+  .tok.strong { font-weight: 700; color: #fff; }
+  .out { margin: 14px 0 22px 150px; padding: 10px 14px; border: 1px solid var(--over); border-radius: 8px; background: rgba(240, 96, 90, .08); }
+  .out .bad { color: var(--over); font-weight: 700; }
+  @media (max-width: 620px) { .row { grid-template-columns: 1fr; } .out { margin-left: 0; } }
+  .strips { display: grid; grid-template-columns: 140px 1fr; gap: 6px 10px; align-items: center; }
+  .sl { display: flex; flex-direction: column; font-size: .85rem; line-height: 1.2; }
+  .sl span { color: var(--muted); font-size: .75rem; }
+  .strip { display: flex; height: 26px; border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+  .strip i { flex: 1; border-right: 1px solid rgba(7, 19, 27, .6); }
+  .strip.seqs { height: 8px; border: 0; }
+  .strip.seqs i { border: 0; }
+  .seqs .sys { background: var(--c-sys); } .seqs .usr { background: var(--c-usr); }
+  .seqs .doc { background: var(--c-doc); } .seqs .tool { background: var(--c-tool); }
+  .how { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; align-self: start; }
+  .how h3 { font-size: 1.05rem; }
+  .step { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-size: .88rem; background: #0b1f28; }
+  .step.model { background: #3a3110; border-color: var(--exp); }
+  .arrow { text-align: center; color: var(--muted); padding: 2px 0; }
+  .key { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .key i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+  .go { color: var(--cyan); font-weight: 600; margin-top: 4px; }
+  figcaption { grid-column: 1 / -1; color: var(--muted); font-size: .8rem; font-style: italic; }
+</style>

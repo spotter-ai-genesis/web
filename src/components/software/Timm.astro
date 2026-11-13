@@ -1,0 +1,48 @@
+---
+// Vision-model capture: patch attention from a ViT, one Flowcept record per forward pass.
+// The attention grid is illustrative.
+const N = 8;
+const att = (r: number, c: number) => {
+  const d = Math.hypot(r - 3.2, c - 4.6), h = Math.abs(Math.sin((r * N + c) * 12.9898) * 43758.5453) % 1;
+  return Math.max(0.04, Math.min(1, 1.1 - d / 3.4 + h * 0.15));
+};
+---
+<figure class="tm">
+  <div class="step">
+    <div class="grid" aria-hidden="true">
+      {Array.from({ length: N * N }, (_, i) => <i style={`background: color-mix(in oklab, #4fd18b ${Math.round(18 + ((i * 37) % 23))}%, #10232c)`}></i>)}
+    </div>
+    <strong>Image → patches</strong><span>e.g. a plant image, split into 16×16-pixel patches</span>
+  </div>
+  <div class="arr">→</div>
+  <div class="step">
+    <div class="vit" aria-hidden="true">{['block 1', 'block 2', '…', 'block L'].map((b) => <i>{b}</i>)}</div>
+    <strong>Vision transformer (timm)</strong><span>attention blocks expose their attention maps</span>
+  </div>
+  <div class="arr">→</div>
+  <div class="step">
+    <div class="grid" aria-hidden="true">
+      {Array.from({ length: N * N }, (_, i) => <i style={`background: color-mix(in oklab, #2b8fd0 ${Math.round(att(Math.floor(i / N), i % N) * 100)}%, #10232c)`}></i>)}
+    </div>
+    <strong>Patch attention</strong><span>which patches the prediction relied on</span>
+  </div>
+  <div class="arr">→</div>
+  <div class="step rec">
+    <div class="file">TimmInterceptor<br />→ Flowcept task<br /><small>one record per forward pass</small></div>
+    <strong>Provenance</strong><span>same record and query path as the language models</span>
+  </div>
+</figure>
+
+<style>
+  .tm { margin: 0; display: grid; grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr; gap: 12px; align-items: start; }
+  @media (max-width: 900px) { .tm { grid-template-columns: 1fr 1fr; } .arr { display: none; } }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px; font-size: .9rem; height: 100%; }
+  .step span { color: var(--muted); font-size: .84rem; }
+  .arr { align-self: center; color: var(--muted); font-size: 1.6rem; }
+  .grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; aspect-ratio: 1; max-width: 150px; width: 100%; margin: 0 auto 10px; }
+  .grid i { border-radius: 2px; }
+  .vit { display: flex; flex-direction: column; gap: 6px; max-width: 150px; width: 100%; margin: 0 auto 10px; aspect-ratio: 1; justify-content: center; }
+  .vit i { font: 600 .75rem/1 var(--mono); font-style: normal; text-align: center; padding: 8px; border-radius: 6px; background: #1b2a3a; border: 1px solid #46607a; }
+  .file { aspect-ratio: 1; max-width: 150px; width: 100%; margin: 0 auto 10px; display: grid; place-items: center; text-align: center; border-radius: 8px; background: #3a2410; border: 1.5px solid #ef8a43; color: #ffd2a8; font: 700 .8rem/1.5 var(--mono); padding: 8px; }
+  .file small { color: #f0d8c0; font-weight: 400; }
+</style>

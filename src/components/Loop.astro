@@ -1,0 +1,64 @@
+---
+// Slide 15: the three thrusts form a self-reinforcing loop, not a pipeline.
+const thrusts = [
+  ['R1', 'Capture', 'Compact yet comprehensive provenance, including the intermediate AI artifacts existing frameworks cannot reach.', 'r1'],
+  ['R2', 'Understand', "Normative importance: is this influence commensurate with the input's content and provenance context?", 'r2'],
+  ['R3', 'Automate forensics', 'Agentic backward reasoning to the root-cause input, plus automatic attack-pattern labeling.', 'r3'],
+];
+const links = [
+  ['provenance to learn from', 'what to capture, at what detail'],
+  ['anomaly flags + importance scores', 'confirmed root causes → fine-tuning'],
+];
+---
+<div class="loop">
+  <div class="row">
+    {thrusts.map(([r, name, text, cls], i) => (
+      <>
+        <div class={`t ${cls}`}>
+          <div class="r">{r}</div>
+          <h3>{name}</h3>
+          <p class="muted">{text}</p>
+        </div>
+        {i < 2 && (
+          <div class="links" aria-hidden="true">
+            <div class="fw"><span>{links[i][0]}</span><b>→</b></div>
+            <div class="bw"><b>←</b><span>{links[i][1]}</span></div>
+          </div>
+        )}
+      </>
+    ))}
+  </div>
+  <div class="back"><strong>R3 → R1:</strong> forensic gaps request deeper capture: zoom in on suspicious artifacts, summarize everything else.</div>
+  <p class="key"><span class="fwk">teal</span> = forward flow · <span class="bwk">blue</span> = feedback that improves the previous stage</p>
+  <div class="adv">
+    <strong>AI advantage.</strong> Detection becomes a <b>direct inference</b> instead of leave-one-out ablation, and
+    forensics becomes a <b>guided search</b> instead of exhaustive traversal. Because the thrusts feed each other,
+    both get sharper as the workflow grows.
+  </div>
+</div>
+
+<style>
+  .loop { --fw: #19b8a6; --bw: #3f8fd8; margin-top: 28px; }
+  .row { display: grid; grid-template-columns: 1fr 150px 1fr 150px 1fr; align-items: stretch; }
+  .t { background: var(--panel); border: 1px solid var(--line); border-top: 5px solid; border-radius: 10px; padding: 20px; }
+  .t.r1 { border-top-color: var(--cyan); } .t.r2 { border-top-color: #4fd18b; } .t.r3 { border-top-color: #4ea3e8; }
+  .r { font: 800 1.9rem/1 var(--mono); margin-bottom: 6px; }
+  .r1 .r { color: var(--cyan); } .r2 .r { color: #4fd18b; } .r3 .r { color: #4ea3e8; }
+  .t p { margin: 0; }
+  .links { display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: 0 10px; font-size: .78rem; font-weight: 700; text-align: center; line-height: 1.2; }
+  .links b { display: block; font-size: 2rem; line-height: .9; }
+  .fw { color: var(--fw); } .bw { color: var(--bw); }
+  .back {
+    margin-top: 22px; padding: 14px 20px 14px 44px; background: var(--bw); color: #fff; font-size: 1.05rem;
+    clip-path: polygon(28px 0, 100% 0, 100% 100%, 28px 100%, 0 50%);
+  }
+  .key { text-align: center; color: var(--muted); font-size: .9rem; margin: 10px 0 22px; }
+  .fwk { color: var(--fw); font-weight: 700; } .bwk { color: var(--bw); font-weight: 700; }
+  .adv { background: #0a3a3a; border-left: 6px solid var(--fw); border-radius: 8px; padding: 18px 22px; font-size: 1.1rem; }
+  .adv strong { color: #4fe0c8; } .adv b { color: #c9fff4; }
+  @media (max-width: 900px) {
+    .row { grid-template-columns: 1fr; }
+    .links { flex-direction: row; justify-content: center; padding: 10px 0; }
+    .links b { transform: rotate(90deg); }
+  }
+</style>

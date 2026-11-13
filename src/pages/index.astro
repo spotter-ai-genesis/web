@@ -1,0 +1,105 @@
+---
+import Base from '../layouts/Base.astro';
+import DeviationHeatmap from '../components/DeviationHeatmap.astro';
+import RootCauseSearch from '../components/RootCauseSearch.astro';
+import { url, GITHUB } from '../lib';
+---
+<Base>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap grid">
+      <div>
+        <div class="eyebrow">DOE Genesis Mission · Topic 20B · Data Provenance &amp; Integrity</div>
+        <h1>Protecting the <span class="accent">logic</span> of AI-driven discovery.</h1>
+        <p class="lede">
+          SPOTTER-AI is a guardian AI for scientific workflows. It records which inputs every AI answer
+          relied on, learns how much each of them <em>should</em> have mattered, and walks back from a
+          wrong result to the input that caused it.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="#approach">See how it works</a>
+          <a class="btn" href={GITHUB}>Code on GitHub ↗</a>
+        </div>
+      </div>
+      <img src={url('/logo.png')} alt="SPOTTER-AI: a provenance graph traced from an LLM's inputs to a suspicious node under a magnifying glass" width="500" height="400" />
+    </div>
+  </section>
+
+  <!-- 01 PROBLEM -->
+  <section class="alt" id="problem">
+    <div class="wrap">
+      <div class="eyebrow"><span class="num">01</span>The problem</div>
+      <h2>One bad input corrupts every round that follows.</h2>
+      <p class="lede">
+        Agentic AI works in rounds. Each prompt mixes instructions, a scientist's question, retrieved
+        documents, instrument data, tool results and earlier answers, each from a different owner with a
+        different level of trust. Today's AI outputs become tomorrow's inputs.
+      </p>
+
+      <div class="rounds" aria-label="Example: three rounds of a plant-science analysis">
+        <div class="round">
+          <div class="h">Round 1 · analysis agent</div>
+          <div class="seq">Analysis rules</div>
+          <div class="seq">Q1: at which nickel dose does Fv/Fm peak?</div>
+          <div class="seq bad">Retrieved finding: tampered</div>
+          <div class="seq">Tool output: means per dose</div>
+          <div class="out bad">“peak at 50” ✗ <span class="muted">(true: 200)</span></div>
+        </div>
+        <div class="round">
+          <div class="h">Round 2 · analysis agent</div>
+          <div class="seq">Analysis rules</div>
+          <div class="seq">Q2: where does Fv/Fm start to decline?</div>
+          <div class="seq">Tool output: means, CI, p-values</div>
+          <div class="seq inh">Earlier answer: peak = 50</div>
+          <div class="out bad">“decline from 100” ✗</div>
+        </div>
+        <div class="round">
+          <div class="h">Round 3 · selection agent</div>
+          <div class="seq">Ranking rules</div>
+          <div class="seq">Q3: top 3 accessions at the onset?</div>
+          <div class="seq">Tool output: accession means</div>
+          <div class="seq inh">Earlier answers: peak + onset</div>
+          <div class="out bad">ranks at the wrong dose ✗</div>
+        </div>
+        <div class="verdict">Wrong top-3 advanced to the next breeding cycle.<br /><span class="muted" style="font-weight:400">Nothing crashes; every step looks reasonable.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 IDEA -->
+  <section id="idea">
+    <div class="wrap">
+      <div class="eyebrow"><span class="num">02</span>The core idea</div>
+      <h2>Normative importance: was the influence deserved?</h2>
+      <p class="lede">
+        Classic attribution asks how much an input influenced the answer. But influential is not the same
+        as malicious. SPOTTER-AI asks how much influence an input <em>should</em> have, given its content
+        and where it came from, and flags the difference.
+      </p>
+      <div class="equation">
+        <div class="card"><div class="tag">Observed</div><h3>Influence</h3><p class="muted">How much each input actually shaped the answer, from attention captured inside the model.</p></div>
+        <div class="op">−</div>
+        <div class="card"><div class="tag">Expected</div><h3>Normative influence</h3><p class="muted">How much it should have, predicted by a transformer from content and provenance, in one forward pass.</p></div>
+        <div class="op">=</div>
+        <div class="card hl"><div class="tag">Signal</div><h3>Deviation</h3><p class="muted">Influence out of proportion to an input's role: an early warning, and a place to look first.</p></div>
+      </div>
+      <DeviationHeatmap />
+    </div>
+  </section>
+
+  <!-- 03 APPROACH -->
+  <section class="alt" id="approach">
+    <div class="wrap">
+      <div class="eyebrow"><span class="num">03</span>Approach</div>
+      <h2>Root-cause analysis: a search, pruned by the heat maps.</h2>
+      <p class="lede">
+        Starting from a wrong result, an agent scores each round's prompt with the normative model and
+        keeps only the inputs whose influence was out of proportion. It then walks back best-first:
+        highest deviation first, stepping into the round that produced an earlier output, and
+        backtracking on a dead end. One forward pass per prompt; no re-runs.
+      </p>
+      <RootCauseSearch />
+      <p style="margin-top:24px"><a href={url('/research/')}>The research behind it: capture, understand, automate forensics →</a></p>
+    </div>
+  </section>
+</Base>
