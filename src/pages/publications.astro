@@ -5,6 +5,8 @@ import { getCollection } from 'astro:content';
 const pubs = (await getCollection('publications')).sort((a, b) => b.data.year - a.data.year || (a.data.order ?? 100) - (b.data.order ?? 100) || a.data.title.localeCompare(b.data.title));
 // The live demo (Apptainer image, prompts and instructions).
 const DEMO = 'https://drive.google.com/drive/folders/1I9kFZOR0eIjIGMVMI1nH3jCd-rWihMKN';
+// The recipe to build the image yourself (Apptainer definitions and launch script).
+const RECIPE = 'https://github.com/spotter-ai-genesis/demo';
 const groups = [
   ['project', 'SPOTTER-AI publications'],
   ['related', 'Foundations and related work'],
@@ -21,7 +23,10 @@ const groups = [
         round, and CLIO turns it into interactive heat maps over every prompt of the session. Runs offline
         from one Apptainer image on a 6 GB GPU.
       </p>
-      <div class="actions"><a class="btn primary" href={DEMO}>Get the demo ↗</a></div>
+      <div class="actions">
+        <a class="btn primary" href={DEMO}>Get the demo ↗</a>
+        <a class="btn" href={RECIPE}>Build it yourself ↗</a>
+      </div>
     </div>
   </section>
   {groups.map(([kind, label]) => {
